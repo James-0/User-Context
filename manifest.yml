@@ -1,0 +1,25 @@
+modules:
+  jira:issueContext:
+    - key: user-context-hello-world-context
+      resource: main
+      resolver:
+        function: resolver
+      title: User Context
+      label: Custom UI
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: static/hello-world/build
+  - key: modal-resource
+    path: static/modal
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/06e9ee2c-0bf8-48e1-bb37-a809ec1b81d7
+permissions:
+  scopes:
+    - read:jira-work
