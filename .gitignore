@@ -53,3 +53,5 @@ Thumbs.db
 /.forge/
 
 context.json
+
+.container-service-assets/
