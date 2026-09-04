@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { invoke, view, Modal } from '@forge/bridge';
 import './App.css';
 import LoadingSpinner from './LoadSpinner';
-import LoadModal from './LoadModal';
+import AdminConfig from './components/AdminConfig';
 
 const context = view.getContext();
 
@@ -11,113 +11,143 @@ function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cleanMessage, setCleanMessage] = useState('');
+  const [isAllowedProject, setIsAllowedProject] = useState(null);
+  const [moduleKey, setModuleKey] = useState(null);
+
+  // useEffect(() => {
+  //   view.getContext().then((ctx) => {
+  //     setModuleKey(ctx.moduleKey);
+  //   });
+  // }, []);
+
+  // useEffect(() => {
+  //   invoke('result', { context })
+  //     .then((result) => {
+  //       setData(result);
+  //     })
+  //     .catch((invokeError) => {
+  //       console.error('Failed to load member data:', invokeError);
+  //       const message = invokeError?.message
+  //         .replace(/^There was an error invoking the function\s*-\s*/i, '')
+  //         .trim();
+  //       setCleanMessage(message);
+  //       setError(message || 'Unable to load member data.');
+  //     })
+  //     .finally(() => {
+  //       setLoading(false);
+  //       setCleanMessage('');
+  //     });
+  // }, []);
 
   useEffect(() => {
-    invoke('result', { context })
-      .then((result) => {
-        setData(result);
-      })
-      .catch((invokeError) => {
+    async function loadApp() {
+      try {
+        const ctx = await view.getContext();
+        console.log('Retrieved context:', ctx);
+        setModuleKey(ctx.moduleKey);
+
+        if (ctx.moduleKey === 'app-issue-panel') {
+          const projectKey = ctx.extension?.project?.key;
+          console.log(`project key is ${projectKey}`);
+          const eligibility = await invoke('checkPanelEligibility', { projectKey });
+          console.log('Eligibility result:', eligibility);
+          setIsAllowedProject(eligibility?.isAllowed);
+          if (!eligibility.isAllowed) {
+            console.log('Project is not allowed, skipping API call');
+            setLoading(false);
+            return;
+          }
+          const result = await invoke('result', { context: ctx });
+          setData(result);
+        }
+      } catch (invokeError) {
         console.error('Failed to load member data:', invokeError);
-        setCleanMessage(invokeError?.message
+        const message = invokeError?.message
           .replace(/^There was an error invoking the function\s*-\s*/i, '')
-          .trim());
-        setError(cleanMessage || 'Unable to load member data.');
-      })
-      .finally(() => {
+          .trim();
+        setCleanMessage(message);
+        setError(message || 'Unable to load member data.');
+      } finally {
         setLoading(false);
         setCleanMessage('');
-      });
+      }
+    }
+    loadApp();
   }, []);
 
-  if (loading || (!data && !error)) {
+  // if (loading || (!data && !error)) {
+  //   return (
+  //     <main className="app-frame">
+  //       <LoadingSpinner />
+  //     </main>
+  //   );
+  // }
+
+
+  function setErrorContent(error) {
+    console.log('Error is', error);
     return (
       <main className="app-frame">
-        <LoadingSpinner />
+        <p>{error}</p>
+        <button
+          onClick={() => {
+            setError(null);
+            setLoading(true);
+            invoke('result', { context })
+              .then((result) => {
+                setData(result);
+              })
+              .catch((invokeError) => {
+                console.error('Failed to load member data:', invokeError);
+                const message = invokeError?.message
+                  .replace(/^There was an error invoking the function\s*-\s*/i, '')
+                  .trim();
+                setCleanMessage(message);
+                setError(message || 'Unable to load member data.');
+              })
+              .finally(() => {
+                setLoading(false);
+                setCleanMessage('');
+              });
+          }}
+        >
+          Retry
+        </button>
       </main>
     );
-  }
-
-  // function customerData() {
-  //   if (!data?.body || data.body === 'N/A') {
-  //     return (
-  //       <main className="app-frame">
-  //         <p>Member data not available.</p>
-  //       </main>
-  //     );
-  //   }
-  // } 
-  function setErrorContent(error) {
-    if (error !== null) {
-      return (
-        <main className="app-frame">
-          <p>{error}</p>
-          <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              invoke('result', { context })
-                .then((result) => {
-                  setData(result);
-                })
-                .catch((invokeError) => {
-                  console.error('Failed to load member data:', invokeError);
-                  setCleanMessage(invokeError?.message
-                    .replace(/^There was an error invoking the function\s*-\s*/i, '')
-                    .trim());
-                  setError(cleanMessage || 'Unable to load member data.');
-                })
-                .finally(() => {
-                  setLoading(false);
-                  setCleanMessage('');
-                });
-            }}
-          >
-            Retry
-          </button>
-        </main>
-      );
-    }
   }
 
   async function openUserModal(data) {
     const modal = new Modal({
       resource: 'modal',
-      onClose: (payload) => {
-        console.log('onClose called with', payload);
+      onClose: (data) => {
+        console.log('onClose called with', data);
       },
-      size: 'medium',
+      size: 'large',
       context: {
-        name: data.Name,
-        email: data.Email,
-        region: data["Region Affiliation"]
+        data: data
       },
-      title: 'My Modal'
+      title: 'Object graph'
     });
     await modal.open();
   }
 
-
-  return (
-    console.log('view.getContext:', context),
-    <main className="app-frame">
-      {error ? (
-        setErrorContent(error)
-      ) : (
-        <div className="vbox">
-          <ul>
-            <li>Name: {data?.body?.Name || 'N/A'}</li>
-            <li>Membership Type: {data?.body?.['Membership Type']?.join(', ') || 'N/A'}</li>
-            <li>Eligibility Status: {data?.body?.['Eligibility Status'] || 'N/A'}</li>
-            <li>Membership ID: {data?.body?.['Membership ID'] || 'N/A'}</li>
-            <li>Email: {data?.body?.Email || 'N/A'}</li>
-            <li>Phone Number: {data?.body?.['Phone Number'] || 'N/A'}</li>
-            {/* <li>Date of Birth: {data?.body?.['Date of Birth'] || 'N/A'}</li>
+  function setContextPanel(data) {
+    return (
+      <div className="vbox">
+        <ul>
+          <li>Name: {data?.body?.Name || 'N/A'}</li>
+          <li>Membership Type: {data?.body?.['Membership Type']?.join(', ') || 'N/A'}</li>
+          <li>Eligibility Status: {data?.body?.['Eligibility Status'] || 'N/A'}</li>
+          <li>Membership ID: {data?.body?.['Membership ID'] || 'N/A'}</li>
+          <li>Email: {data?.body?.Email || 'N/A'}</li>
+          <li>Phone Number: {data?.body?.['Phone Number'] || 'N/A'}</li>
+          <li>Region Affiliation: {data?.body?.['Region Affiliation'] || 'N/A'}</li>
+          {/* <li>Date of Birth: {data?.body?.['Date of Birth'] || 'N/A'}</li>
             <li>Age Definition: {data?.body?.['Age Definition'] || 'N/A'}</li>
             <li>Gender: {data?.body?.Gender || 'N/A'}</li>
             <li>Club Affiliation: {data?.body?.['Club Affiliation'] || 'N/A'}</li>
             <li>Grade: {data?.body?.Grade || 'N/A'}</li>
-            <li>Region Affiliation: {data?.body?.['Region Affiliation'] || 'N/A'}</li>
             <li>Household Link: {data?.body?.['Household Link'] || 'N/A'}</li>
             <li>Staff Role for Club: {data?.body?.['Staff Role for Club'] || 'N/A'}</li>
             <li>Club Name: {data?.body?.['Club Name'] || 'N/A'}</li>
@@ -126,23 +156,59 @@ function App() {
             <li>Region Affiliation for Club: {data?.body?.['Region Affiliation for Club'] || 'N/A'}</li>
             <li>Staff Role for Region: {data?.body?.['Staff Role for Region'] || 'N/A'}</li>
             <li>Region Name: {data?.body?.['Region Name'] || 'N/A'}</li> */}
-          </ul>
-          <div>
-            <button
-              appearance="link"
-              onClick={
-                () => {
-                  console.log('Calling Modal Dialog...');
-                  openUserModal(data?.body)
-                }}
-            >
-              View full profile →
-            </button>
-          </div>
+        </ul>
+        <div>
+          <button
+            className="link-button"
+            onClick={
+              () => {
+                console.log('Calling Modal Dialog...');
+                openUserModal(data?.body)
+              }}
+          >
+            View full profile →
+          </button>
         </div>
-      )}
-    </main>
-  );
+      </div>
+    )
+  }
+
+
+  if (loading || moduleKey === null) {
+    return <LoadingSpinner />;
+  }
+
+  if (moduleKey === 'app-issue-panel' && isAllowedProject === null) {
+    return <LoadingSpinner />;
+  }
+
+  if (loading || moduleKey === null || isAllowedProject === null) return <LoadingSpinner />;
+  
+  if (moduleKey === 'app-issue-panel' && !isAllowedProject) {
+    // module : app-issue-panel is not allowed for this project
+    return null;
+  }
+
+  if (moduleKey === 'app-admin-page') {
+    console.log('module key is', moduleKey);
+    return <AdminConfig />
+  };
+
+  if (moduleKey === 'app-issue-panel') {
+    console.log('module key is', moduleKey);
+    return (
+      console.log('view.getContext:', context),
+      <main className="app-frame">
+        {error ? (
+          setErrorContent(error)
+        ) : (
+          setContextPanel(data)
+        )}
+      </main>
+    );
+  };
+  return null;
+
 }
 
 

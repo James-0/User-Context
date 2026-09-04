@@ -1,20 +1,58 @@
 modules:
   jira:issueContext:
-    - key: user-context-hello-world-context
+    - key: app-issue-panel
       resource: main
       resolver:
         function: resolver
       title: User Context
       label: Custom UI
+
+  jira:adminPage:
+    - key: app-admin-page
+      title: App Configuration
+      resource: main
+      resolver:
+        function: admin-resolver
+
+  consumer:
+    - key: jira-projects-queue
+      queue: jira-projects-queue
+      function: processJiraQueue
+
+
   function:
     - key: resolver
       handler: index.handler
+    - key: admin-resolver
+      handler: index.adminHandler
+    - key: processJiraQueue
+      handler: index.processJiraQueue
+      timeoutSeconds: 900
+
 resources:
   - key: main
     path: static/hello-world/build
-  - key: modal-resource
+  - key: modal
     path: static/modal
 app:
+  storage:
+    entities:
+      - name: app_settings
+        attributes:
+          allowedProjects:
+            type: any
+          selectedFields:
+            type: any
+      - name: project_cache
+        attributes:
+          startAt:
+            type: integer
+          projects:
+            type: any
+          isLast:
+            type: boolean
+          fetchedAt:
+            type: string
   runtime:
     name: nodejs24.x
     memoryMB: 256
@@ -23,3 +61,5 @@ app:
 permissions:
   scopes:
     - read:jira-work
+    - read:jira-user
+    - storage:app

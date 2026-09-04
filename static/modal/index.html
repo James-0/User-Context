@@ -1,16 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>User Details</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Details</title>
+  <link rel="stylesheet" href="./modal.css">
 </head>
 <body>
-	<div>
-		<p><span>Name:</span> <span id="name">John Doe</span></p>
-		<p><span>Email address:</span> <span id="email">john.doe@example.com</span></p>
-		<p><span>Region:</span> <span id="region">North America</span></p>
-	</div>
-    <script type="module" src="./modal.js"></script>
+  <main class="profile">
+    <header class="profile-header">
+      <h1 id="name">Loading...</h1>
+      <p id="membership-id"></p>
+      <span id="eligibility-status"></span>
+    </header>
+
+    <section>
+      <h2>Contact</h2>
+      <dl id="contact-details"></dl>
+    </section>
+
+    <section>
+      <h2>Membership</h2>
+      <dl id="membership-details"></dl>
+    </section>
+
+    <section>
+      <h2>Affiliations</h2>
+      <dl id="affiliation-details"></dl>
+    </section>
+  </main>
+
+  <script src="./modal.bundle.js"></script>
 </body>
 </html>

@@ -14,7 +14,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build && npm run build:modal",
+    "build:modal": "esbuild ../modal/modal.js --bundle --outfile=../modal/modal.bundle.js",
     "eject": "react-scripts eject"
   },
   "browserslist": {
